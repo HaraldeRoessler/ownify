@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+adapters/
+models/
+*.safetensors
+*.gguf
+config.yaml
+.env
+.DS_Store
+src/.DS_Store
+CLAUDE.md
