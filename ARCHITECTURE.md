@@ -2,34 +2,47 @@
 
 ## Overview
 
-ownify is three things working together:
+ownify is four things working together:
 
 1. **The openclaw adapter** — shared open-source behavior (how to be a personal AI, when to escalate)
 2. **A personal LoRA adapter** — your knowledge, style, and preferences (optional, private)
 3. **A local inference runtime** — runs the base model + adapters on your device via MLX
+4. **A trust layer** — decentralized identity and reputation via [MolTrust](https://moltrust.ch/)
 
 ```
-┌─────────────────────────────────────────────────┐
-│                  Your Device                     │
-│                                                  │
-│  ┌───────────┐  ┌──────────┐  ┌──────────────┐  │
-│  │ Base Model│+ │ openclaw │+ │ Personal     │  │
-│  │ Qwen 3.5 │  │ (shared) │  │ (yours only) │  │
-│  │ 4B       │  │ adapter  │  │ adapter      │  │
-│  └───────────┘  └──────────┘  └──────┬───────┘  │
-│                                      │           │
-│                         ┌────────────┴───┐       │
-│                         │  Can I handle  │       │
-│                         │  this myself?  │       │
-│                         └───┬────────┬───┘       │
-│                         yes │        │ no        │
-│                             ▼        ▼           │
-│                       ┌────────┐ ┌────────┐      │
-│                       │ Answer │ │Escalate│      │
-│                       │locally │ │to API  │─────── → Large LLM API
-│                       └────────┘ └────────┘      │
-│                                                  │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                      Your Device                          │
+│                                                           │
+│  ┌───────────┐  ┌──────────┐  ┌──────────────┐           │
+│  │ Base Model│+ │ openclaw │+ │ Personal     │           │
+│  │ Qwen 3.5 │  │ (shared) │  │ (yours only) │           │
+│  │ 4B       │  │ adapter  │  │ adapter      │           │
+│  └───────────┘  └──────────┘  └──────┬───────┘           │
+│                                      │                    │
+│                         ┌────────────┴───┐                │
+│                         │  Can I handle  │                │
+│                         │  this myself?  │                │
+│                         └───┬────────┬───┘                │
+│                         yes │        │ no                 │
+│                             ▼        ▼                    │
+│                       ┌────────┐ ┌────────┐               │
+│                       │ Answer │ │Escalate│────────────── → Large LLM API
+│                       │locally │ │to API  │               │
+│                       └────────┘ └───┬────┘               │
+│                                      │                    │
+│  ┌───────────────────────────────────┴──────────────────┐ │
+│  │              MolTrust Layer (local keys)              │ │
+│  │  ┌─────────┐  ┌──────────┐  ┌─────────┐  ┌───────┐  │ │
+│  │  │ Ed25519 │  │  Verify  │  │  Sign   │  │ Cache │  │ │
+│  │  │ Keypair │  │  Remote  │  │ Outputs │  │ Trust │  │ │
+│  │  │ (DID)   │  │  Agents  │  │ (IPR)   │  │ Data  │  │ │
+│  │  └─────────┘  └──────────┘  └─────────┘  └───────┘  │ │
+│  └──────────────────────────────────────────────────────┘ │
+│                            │                              │
+└────────────────────────────┼──────────────────────────────┘
+                             │
+                    Base L2 Blockchain
+                   (MolTrust anchoring)
 ```
 
 ## Two-Layer Adapter Architecture
@@ -190,6 +203,88 @@ Desktop                          Mobile
 - Latest adapter wins (one person, one device active at a time)
 - Transport is pluggable: iCloud Drive, Syncthing, USB, manual copy
 - No server required
+
+## Trust Layer — MolTrust Integration
+
+ownify integrates [MolTrust](https://moltrust.ch/) for decentralized agent identity, trust verification, and output provenance. MolTrust is an open-source protocol by [MoltyCel](https://github.com/MoltyCel) that provides W3C DID-based identity and cryptographic trust anchoring on the Base L2 blockchain.
+
+**Why ownify needs a trust layer:**
+
+A personal AI that runs locally is private by design — but the moment it escalates to external APIs or interacts with other agents, trust becomes a question. Who is this agent? Can I trust the response? Did my agent actually produce this output? MolTrust answers these without requiring a central authority.
+
+### How it works in ownify
+
+**1. Agent Identity (DID)**
+- On first run, ownify generates an Ed25519 keypair stored locally
+- Registers as a Decentralized Identifier (DID) on MolTrust
+- The keypair is yours — stored on your device, never shared
+- Other agents can verify your identity without a central broker
+
+**2. Escalation Trust**
+- Before escalating to an external API or agent, ownify verifies the target's MolTrust identity
+- Checks trust score, reputation history, and domain credentials
+- Refuses escalation to unverified or low-reputation agents (configurable)
+
+**3. Output Provenance (IPR)**
+- Interaction Proof Records create a cryptographic audit trail
+- Every escalation can be signed: what was sent, what was received, when
+- Enables verifiable proof of what your agent did — useful for accountability
+
+**4. Offline Verification**
+- Public keys are anchored on Base L2 blockchain
+- ownify caches resolved keys locally
+- Verification works offline after initial key resolution — no API calls needed
+
+### Architecture
+
+```
+┌──────────────────────────────────────┐
+│         MolTrust Layer               │
+│                                      │
+│  ┌─────────────┐  ┌──────────────┐   │
+│  │ Local Keys  │  │ Trust Cache  │   │
+│  │ Ed25519 DID │  │ (Base L2)    │   │
+│  └──────┬──────┘  └──────┬───────┘   │
+│         │                │           │
+│  ┌──────┴──────┐  ┌──────┴───────┐   │
+│  │ Sign/Verify │  │ Reputation   │   │
+│  │ Outputs     │  │ Check        │   │
+│  └─────────────┘  └──────────────┘   │
+└──────────────────────────────────────┘
+         │                  │
+         ▼                  ▼
+  MolTrust API         Base L2
+  (api.moltrust.ch)    (blockchain)
+```
+
+### Integration points
+
+| ownify Event | MolTrust Action |
+|---|---|
+| First run | Generate Ed25519 keypair, register DID |
+| Escalation request | Verify target agent's identity and trust score |
+| Escalation response | Sign output proof (IPR) |
+| Agent-to-agent interaction | Mutual DID verification |
+| User audit request | Present signed interaction history |
+
+### Privacy alignment
+
+MolTrust's design aligns with ownify's privacy principles:
+
+- **Your keypair is local** — the DID resolves to a public key, not your personal data
+- **Verification is decentralized** — no central authority tracks your interactions
+- **Offline-capable** — cache keys locally, verify without network
+- **User-controlled** — you decide when to sign, what to prove, who to trust
+
+### Credits
+
+The trust layer is built on the [MolTrust Protocol](https://moltrust.ch/) by [MoltyCel](https://github.com/MoltyCel):
+
+- **Protocol:** [github.com/MoltyCel/moltrust-api](https://github.com/MoltyCel/moltrust-api)
+- **Website:** [moltrust.ch](https://moltrust.ch/)
+- **GitHub:** [github.com/MoltyCel](https://github.com/MoltyCel)
+
+MolTrust provides the decentralized identity, reputation, and verification infrastructure that makes trustworthy agent interactions possible without centralized trust brokers. ownify uses MolTrust as its trust foundation — we build on their protocol, not reinvent it.
 
 ## Training Data Format
 

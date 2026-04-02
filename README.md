@@ -52,6 +52,19 @@ ownify (local, small model)
     |--> Needs more? --> Escalates to large LLM API --> Returns answer locally
 ```
 
+## Trust Layer — MolTrust
+
+When ownify escalates to external models or interacts with other agents, trust matters. ownify integrates the [MolTrust Protocol](https://moltrust.ch/) by [MoltyCel](https://github.com/MoltyCel) for decentralized agent identity and verification:
+
+- **Agent identity** — Ed25519 keypair stored locally, registered as a W3C Decentralized Identifier (DID)
+- **Escalation trust** — verify external agents before sending your data to them
+- **Output provenance** — cryptographic proof of what your agent did (Interaction Proof Records)
+- **Offline verification** — cache public keys from Base L2 blockchain, verify without network
+
+No central authority. Your identity is a local keypair. Trust is cryptographic, not assumed.
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for full integration design. Built on [MolTrust](https://github.com/MoltyCel/moltrust-api) — all credit to [MoltyCel](https://github.com/MoltyCel) for the protocol.
+
 ## Quickstart
 
 ```bash
@@ -131,6 +144,7 @@ Total: **684 examples** available for training. Currently training on v2 (184 ex
 - [x] Desktop runtime — interactive chat via MLX
 - [ ] Merge all 684 training examples into openclaw v3
 - [ ] Escalation runtime — automatic API calls when model flags `<escalate />`
+- [ ] MolTrust integration — DID identity, escalation trust verification, output provenance
 - [ ] Personal adapter training guide
 - [ ] Mobile runtime (iOS, Android)
 - [ ] LoRA adapter sync between desktop and mobile devices
@@ -142,6 +156,9 @@ The individual pieces exist — no one has combined them.
 
 ### Behavior Model
 - **[OpenClaw](https://github.com/openclaw/openclaw)** — the agent behavior our openclaw adapter is modeled on. Direct, efficient, genuine helpfulness, SOUL.md personality framework.
+
+### Trust & Identity
+- **[MolTrust](https://moltrust.ch/)** by [MoltyCel](https://github.com/MoltyCel) — decentralized trust protocol for AI agents. W3C DIDs, Ed25519 signatures, Base L2 blockchain anchoring. ownify's trust layer is built on MolTrust. [GitHub](https://github.com/MoltyCel/moltrust-api)
 
 ### Local LLM Runtimes
 [Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), [GPT4All](https://www.nomic.ai/gpt4all), [llama.cpp](https://github.com/ggerganov/llama.cpp) — all run models locally but offer no personal fine-tuning, no escalation, no cross-device sync.
