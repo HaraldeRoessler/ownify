@@ -60,6 +60,31 @@ The escalation decision is learned behavior — trained into the model, not hard
 - [ ] LoRA adapter sync between desktop and mobile devices
 - [ ] Incremental learning — update the adapter as you use it
 
+## Related Work
+
+The individual pieces exist — no one has combined them.
+
+### Local LLM Runtimes
+[Ollama](https://ollama.com/), [LM Studio](https://lmstudio.ai/), [GPT4All](https://www.nomic.ai/gpt4all), [llama.cpp](https://github.com/ggerganov/llama.cpp) — all run models locally but offer no personal fine-tuning, no escalation, no cross-device sync.
+
+### Personal AI Assistants
+- **[OpenDAN](https://github.com/fiatrete/OpenDAN-Personal-AI-OS)** (~70% aligned) — personal AI OS with LoRA support, but routing is config-based, not learned. No device sync.
+- **[Khoj](https://github.com/khoj-ai/khoj)** (~60% aligned) — self-hosted personal AI with knowledge base. RAG-focused, no LoRA fine-tuning, no escalation.
+- **[AnythingLLM](https://anythingllm.com/)** (~40% aligned) — local AI with document management. No personalization or escalation.
+
+### Learned Routing (Academic)
+- **[RouteLLM](https://github.com/lm-sys/RouteLLM)** (ICLR 2025) — trains routers to select between weak/strong models. 2x cost reduction. But cloud-only, not local-to-cloud.
+- **["Tell me about yourself"](https://arxiv.org/html/2501.11120v1)** (ICLR 2025) — proves fine-tuned LLMs can introspect on their own capabilities. Directly supports our core assumption.
+- **[Confidence Token Routing](https://arxiv.org/html/2410.13284v3)** — uses logit confidence scores for dynamic routing decisions.
+
+### On-Device Fine-Tuning
+- **[Hugging Face PEFT](https://github.com/huggingface/peft)** — LoRA adapters: 6-50MB vs multi-GB models, trainable on consumer hardware.
+- **[Unsloth](https://unsloth.ai/)** — fast LoRA fine-tuning optimized for local hardware.
+- **[MobileFineTuner](https://arxiv.org/html/2512.08211v1)** — demonstrates LoRA fine-tuning directly on mobile phones.
+
+### What's missing everywhere
+No existing project combines: (1) behavior in weights via LoRA, (2) learned self-escalation, (3) desktop-mobile adapter sync, (4) single-person design. That's ownify.
+
 ## Requirements
 
 - A computer with 8GB+ RAM (for 3B model) or 16GB+ RAM (for 7B model)
