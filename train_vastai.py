@@ -96,7 +96,6 @@ def main():
             save_total_limit=2,
             bf16=True,
             report_to="none",
-            max_seq_length=MAX_SEQ_LENGTH,
             dataset_text_field="text",
             gradient_checkpointing=True,
         ),
