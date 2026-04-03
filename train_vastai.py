@@ -20,7 +20,7 @@ DATA_FILE     = "data/openclaw-v3.jsonl"
 
 MAX_SEQ_LENGTH = 2048
 LORA_RANK      = 8
-BATCH_SIZE     = 2
+BATCH_SIZE     = 1
 GRAD_ACCUM     = 4
 LR             = 1e-5
 MAX_STEPS      = 800
@@ -97,7 +97,8 @@ def main():
             bf16=True,
             report_to="none",
             dataset_text_field="text",
-            gradient_checkpointing=False,
+            gradient_checkpointing=True,
+            gradient_checkpointing_kwargs={"use_reentrant": False},
         ),
     )
 
