@@ -97,7 +97,7 @@ def main():
             bf16=True,
             report_to="none",
             dataset_text_field="text",
-            gradient_checkpointing=True,
+            gradient_checkpointing=False,
         ),
     )
 
