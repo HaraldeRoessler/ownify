@@ -77,7 +77,7 @@ def main():
 
     trainer = SFTTrainer(
         model=model,
-        tokenizer=tokenizer,
+        processing_class=tokenizer,
         train_dataset=split["train"],
         eval_dataset=split["test"],
         args=SFTConfig(
