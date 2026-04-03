@@ -1,6 +1,6 @@
 """
-ownify — Unsloth LoRA training script for vast.ai (NVIDIA GPU)
-Mirrors configs/openclaw-mlx-v3.yaml but runs on PyTorch + CUDA.
+ownify — Training script for vast.ai (NVIDIA GPU).
+Uses standard PEFT/Transformers so adapter keys match locally.
 
 Usage:
     python train_vastai.py
@@ -8,17 +8,18 @@ Usage:
 
 import json
 from datasets import Dataset
-from unsloth import FastLanguageModel
+from peft import LoraConfig, get_peft_model
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from trl import SFTTrainer, SFTConfig
+import torch
 
 # ── Config ────────────────────────────────────────────────────────────────────
-MODEL_NAME    = "Qwen/Qwen3.5-4B"    # Qwen3.5 4B — matches local MLX training
+MODEL_NAME    = "Qwen/Qwen3.5-4B"
 ADAPTER_PATH  = "adapters/openclaw-mlx-v3"
 DATA_FILE     = "data/openclaw-v3.jsonl"
 
-MAX_SEQ_LENGTH = 2048   # More VRAM on cloud → use full length
+MAX_SEQ_LENGTH = 2048
 LORA_RANK      = 8
-LORA_LAYERS    = 8      # num_layers equivalent
 BATCH_SIZE     = 2
 GRAD_ACCUM     = 4
 LR             = 1e-5
@@ -38,7 +39,6 @@ def load_data(path: str) -> Dataset:
 
 
 def format_example(example, tokenizer):
-    """Apply Qwen chat template to messages."""
     text = tokenizer.apply_chat_template(
         example["messages"],
         tokenize=False,
@@ -49,42 +49,37 @@ def format_example(example, tokenizer):
 
 def main():
     print(f"Loading model: {MODEL_NAME}")
-    model, tokenizer = FastLanguageModel.from_pretrained(
-        model_name=MODEL_NAME,
-        max_seq_length=MAX_SEQ_LENGTH,
-        dtype=None,          # auto-detect (bfloat16 on A100, float16 on others)
-        load_in_4bit=False,  # full precision for better quality
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModelForCausalLM.from_pretrained(
+        MODEL_NAME,
+        torch_dtype=torch.bfloat16,
+        device_map="auto",
     )
 
-    model = FastLanguageModel.get_peft_model(
-        model,
+    lora_config = LoraConfig(
         r=LORA_RANK,
+        lora_alpha=LORA_RANK * 2,
         target_modules=["q_proj", "k_proj", "v_proj", "o_proj",
                         "gate_proj", "up_proj", "down_proj"],
-        lora_alpha=LORA_RANK * 2,   # scale equivalent
         lora_dropout=0.0,
         bias="none",
-        use_gradient_checkpointing=True,
-        random_state=SEED,
-        use_rslora=False,
-        loftq_config=None,
+        task_type="CAUSAL_LM",
     )
+    model = get_peft_model(model, lora_config)
+    model.print_trainable_parameters()
 
     print(f"Loading data: {DATA_FILE}")
     dataset = load_data(DATA_FILE)
     dataset = dataset.map(lambda x: format_example(x, tokenizer))
-
     split = dataset.train_test_split(test_size=0.1, seed=SEED)
-    train_data = split["train"]
-    eval_data  = split["test"]
 
-    print(f"Train: {len(train_data)} examples, Eval: {len(eval_data)} examples")
+    print(f"Train: {len(split['train'])} examples, Eval: {len(split['test'])} examples")
 
     trainer = SFTTrainer(
         model=model,
         tokenizer=tokenizer,
-        train_dataset=train_data,
-        eval_dataset=eval_data,
+        train_dataset=split["train"],
+        eval_dataset=split["test"],
         args=SFTConfig(
             output_dir=ADAPTER_PATH,
             max_steps=MAX_STEPS,
@@ -99,12 +94,11 @@ def main():
             eval_strategy="steps",
             save_steps=200,
             save_total_limit=2,
-            fp16=False,
             bf16=True,
             report_to="none",
             max_seq_length=MAX_SEQ_LENGTH,
             dataset_text_field="text",
-            dataset_num_proc=2,
+            gradient_checkpointing=True,
         ),
     )
 
