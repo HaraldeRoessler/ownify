@@ -12,7 +12,7 @@ from unsloth import FastLanguageModel
 from trl import SFTTrainer, SFTConfig
 
 # ── Config ────────────────────────────────────────────────────────────────────
-MODEL_NAME    = "Qwen/Qwen2.5-3B"   # Qwen2.5 3B — closest available on HF
+MODEL_NAME    = "Qwen/Qwen3-4B"      # Qwen3 4B — matches local MLX training
 ADAPTER_PATH  = "adapters/openclaw-mlx-v3"
 DATA_FILE     = "data/openclaw-v3.jsonl"
 
