@@ -13,7 +13,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 MODEL_NAME   = "Qwen/Qwen3.5-4B"
-ADAPTER_PATH = "adapters/adapters/openclaw-mlx-v3/checkpoint-800"
+ADAPTER_PATH = "adapters/openclaw-mlx-v3-peft/adapters/openclaw-mlx-v3"  # trained with standard PEFT
 
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
